@@ -13,15 +13,13 @@ import { consumeTag, createTag, dirtyTag } from '@glimmer/validator';
 
 export const RECOMPUTE_TAG = symbol('RECOMPUTE_TAG');
 
-export type HelperFunction<T, P extends unknown[], N extends Dict<unknown>> = (
-  positional: P,
-  named: N
-) => T;
+export type HelperFunction<
+  T = unknown,
+  P extends unknown[] = unknown[],
+  N extends Dict<unknown> = Dict<unknown>
+> = (positional: P, named: N) => T;
 
-export type SimpleHelperFactory<T, P extends unknown[], N extends Dict<unknown>> = Factory<
-  SimpleHelper<T, P, N>,
-  HelperFactory<SimpleHelper<T, P, N>>
->;
+export type SimpleHelperFactory = Factory<SimpleHelper, HelperFactory<SimpleHelper>>;
 export type ClassHelperFactory = Factory<HelperInstance, HelperFactory<HelperInstance>>;
 
 export interface HelperFactory<T> {
@@ -36,7 +34,11 @@ export interface HelperInstance<T = unknown> {
 
 const IS_CLASSIC_HELPER: unique symbol = Symbol('IS_CLASSIC_HELPER');
 
-export interface SimpleHelper<T, P extends unknown[], N extends Dict<unknown>> {
+export interface SimpleHelper<
+  T = unknown,
+  P extends unknown[] = unknown[],
+  N extends Dict<unknown> = Dict<unknown>
+> {
   compute: HelperFunction<T, P, N>;
 }
 
@@ -263,9 +265,11 @@ setHelperManager(() => SIMPLE_CLASSIC_HELPER_MANAGER, Wrapper.prototype);
   @public
   @since 1.13.0
 */
-export function helper<T, P extends unknown[], N extends Dict<unknown>>(
-  helperFn: HelperFunction<T, P, N>
-): HelperFactory<SimpleHelper<T, P, N>> {
+export function helper<
+  T = unknown,
+  P extends unknown[] = unknown[],
+  N extends Dict<unknown> = Dict<unknown>
+>(helperFn: HelperFunction<T, P, N>): HelperFactory<SimpleHelper<T, P, N>> {
   return new Wrapper(helperFn);
 }
 
