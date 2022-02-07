@@ -1,16 +1,10 @@
 import Component from '@ember/component';
 import { CoreView } from '@ember/-internals/views';
 import { expectTypeOf } from 'expect-type';
-import { View } from '@ember/-internals/glimmer/lib/renderer';
+import { Owner } from '@ember/-internals/owner';
 
-const MyComponent = Component.extend();
-
-let component = MyComponent.create();
+// NOTE: This is invalid, but acceptable for type tests
+let owner = {} as Owner;
+let component = new Component(owner);
 
 expectTypeOf(component).toMatchTypeOf<CoreView>();
-expectTypeOf(component).toMatchTypeOf<View>();
-
-expectTypeOf(component.tagName).toEqualTypeOf<string | null>();
-expectTypeOf(component.classNames).toEqualTypeOf<string[]>();
-expectTypeOf(component.classNameBindings).toEqualTypeOf<string[]>();
-expectTypeOf(component.attributeBindings).toEqualTypeOf<string[] | undefined>();
