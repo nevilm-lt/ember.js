@@ -19,7 +19,7 @@ expectTypeOf(
     true,
     undefined
   )
-).toEqualTypeOf<number>();
+).toEqualTypeOf<void>();
 
 expectTypeOf(
   run(
@@ -30,7 +30,7 @@ expectTypeOf(
     true,
     'string'
   )
-).toEqualTypeOf<number>();
+).toEqualTypeOf<void>();
 
 run((_foo: number): number => {
   return 1;
@@ -48,7 +48,7 @@ expectTypeOf(
     1,
     true
   )
-).toEqualTypeOf<number>();
+).toEqualTypeOf<void>();
 
 expectTypeOf(
   run(
@@ -60,7 +60,7 @@ expectTypeOf(
     true,
     'string'
   )
-).toEqualTypeOf<number>();
+).toEqualTypeOf<void>();
 
 // @ts-expect-error invalid args
 run(
@@ -74,9 +74,9 @@ run(
 );
 
 // With function string reference
-expectTypeOf(run(foo, 'test', 1, true, 'string')).toEqualTypeOf<number>();
+expectTypeOf(run(foo, 'test', 1, true, 'string')).toEqualTypeOf<void>();
 
-expectTypeOf(run(foo, 'test', 1, true)).toEqualTypeOf<number>();
+expectTypeOf(run(foo, 'test', 1, true)).toEqualTypeOf<void>();
 
 // @ts-expect-error Invalid args
 run(foo, 'test', 'string');
