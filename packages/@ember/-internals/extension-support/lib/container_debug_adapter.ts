@@ -62,7 +62,7 @@ export default class ContainerDebugAdapter extends EmberObject {
     @property resolver
     @public
   */
-  resolver: Resolver;
+  declare resolver: Resolver;
 
   /**
     Returns true if it is possible to catalog a list of available
