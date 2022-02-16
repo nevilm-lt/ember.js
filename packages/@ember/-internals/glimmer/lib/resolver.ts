@@ -145,7 +145,6 @@ const BUILTIN_HELPERS = {
   fn,
   get,
   hash,
-  'unique-id': uniqueId,
 };
 
 if (EMBER_UNIQUE_ID_HELPER) {
