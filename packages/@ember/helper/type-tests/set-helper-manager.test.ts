@@ -1,14 +1,13 @@
 import { HelperFactory, HelperFunction, SimpleHelper } from '@ember/-internals/glimmer/lib/helper';
 import { getDebugName } from '@ember/-internals/utils';
 import { capabilities, setHelperManager } from '@ember/helper';
-import { Arguments, Dict, HelperManager } from '@glimmer/interfaces';
+import { Arguments, HelperManager } from '@glimmer/interfaces';
 import { expectTypeOf } from 'expect-type';
 
-class Wrapper<T = unknown, P extends unknown[] = unknown[], N extends Dict<unknown> = Dict<unknown>>
-  implements HelperFactory<SimpleHelper<T, P, N>> {
+class Wrapper implements HelperFactory<SimpleHelper> {
   isHelperFactory: true = true;
 
-  constructor(public compute: HelperFunction<T, P, N>) {}
+  constructor(public compute: HelperFunction) {}
 
   create() {
     // needs new instance or will leak containers
@@ -42,7 +41,7 @@ export const SIMPLE_CLASSIC_HELPER_MANAGER = new SimpleClassicHelperManager();
 
 expectTypeOf(
   setHelperManager(() => SIMPLE_CLASSIC_HELPER_MANAGER, Wrapper.prototype)
-).toEqualTypeOf<Wrapper<any, any, any>>();
+).toEqualTypeOf<Wrapper>();
 
 // @ts-expect-error invalid factory
 setHelperManager(1, Wrapper.prototype);

@@ -13,12 +13,10 @@ class PlusOne extends Helper {
   }
 }
 
-class PlusOneComponent extends Component {
-  declare number: number;
-
+export default class PlusOneComponent extends Component {
   plusOne = invokeHelper(this, PlusOne, () => {
     return {
-      positional: [this.number],
+      positional: [this.args.number],
     };
   });
 
@@ -27,6 +25,6 @@ class PlusOneComponent extends Component {
   }
 }
 
-let component = PlusOneComponent.create();
+let component = new PlusOneComponent();
 
 expectTypeOf(component.plusOne).toEqualTypeOf<Cache<unknown>>();
