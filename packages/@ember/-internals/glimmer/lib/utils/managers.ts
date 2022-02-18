@@ -17,7 +17,7 @@ import {
    @return {Object} the same object passed in
    @public
   */
-export function setComponentManager<T extends object>(
+export function setComponentManager(
   manager: (owner: Owner) => ComponentManager<unknown>,
   obj: T
 ): T {
