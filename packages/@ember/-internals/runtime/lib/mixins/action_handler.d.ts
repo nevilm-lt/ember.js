@@ -1,9 +1,6 @@
 import { Mixin } from '@ember/-internals/metal';
 
-interface ActionHandler {
-  actions?: Record<string, (...args: any[]) => unknown>;
+export default class ActionHandler extends Mixin {
+  actions?: Record<string, (...args: unknown[]) => void>;
   send(actionName: string, ...args: unknown[]): void;
 }
-declare const ActionHandler: Mixin;
-
-export default ActionHandler;
