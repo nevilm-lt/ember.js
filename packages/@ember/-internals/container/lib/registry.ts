@@ -40,10 +40,6 @@ export interface ResolverClass {
   create(...args: unknown[]): Resolver;
 }
 
-export interface ResolverClass {
-  create(...args: unknown[]): Resolver;
-}
-
 export interface Resolver {
   knownForType?: (type: string) => KnownForTypeResult;
   lookupDescription?: (fullName: string) => string;
