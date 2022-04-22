@@ -1,6 +1,7 @@
 /**
 @module @ember/object
 */
+import ProxyMixin from '@ember/-internals/runtime/lib/mixins/-proxy';
 import { isEmberArray, setProxy, symbol } from '@ember/-internals/utils';
 import { assert } from '@ember/debug';
 import { DEBUG } from '@glimmer/env';
@@ -23,7 +24,7 @@ if (DEBUG) {
   };
 }
 
-interface MaybeHasUnknownProperty {
+export interface MaybeHasUnknownProperty {
   unknownProperty?: (keyName: string) => any;
 }
 
@@ -70,8 +71,8 @@ interface MaybeHasIsDestroyed {
   @public
 */
 export function get<T extends object, K extends keyof T>(obj: T, keyName: K): T[K];
-export function get(obj: object, keyName: string): unknown;
-export function get(obj: object, keyName: string): unknown {
+export function get(obj: unknown, keyName: string): unknown;
+export function get(obj: unknown, keyName: string): unknown {
   assert(
     `Get must be called with two arguments; an object and a property key`,
     arguments.length === 2
@@ -92,16 +93,14 @@ export function get(obj: object, keyName: string): unknown {
   return isPath(keyName) ? _getPath(obj, keyName) : _getProp(obj, keyName);
 }
 
-export function _getProp(obj: object, keyName: string) {
-  let type = typeof obj;
-
-  let isObject = type === 'object';
-  let isFunction = type === 'function';
-  let isObjectLike = isObject || isFunction;
+export function _getProp(obj: unknown, keyName: string) {
+  if (obj == null) {
+    return;
+  }
 
   let value: unknown;
 
-  if (isObjectLike) {
+  if (typeof obj === 'object' || typeof obj === 'function') {
     if (DEBUG) {
       value = getPossibleMandatoryProxyValue(obj, keyName);
     } else {
@@ -110,7 +109,7 @@ export function _getProp(obj: object, keyName: string) {
 
     if (
       value === undefined &&
-      isObject &&
+      typeof obj === 'object' &&
       !(keyName in obj) &&
       typeof (obj as MaybeHasUnknownProperty).unknownProperty === 'function'
     ) {
@@ -127,22 +126,22 @@ export function _getProp(obj: object, keyName: string) {
       }
     }
   } else {
-    value = obj[keyName];
+    // SAFETY: It should be ok to access properties on any non-nullish value
+    value = (obj as object)[keyName];
   }
 
   return value;
 }
 
-export function _getPath<T extends object>(root: T, path: string | string[]): any {
-  let obj: any = root;
+export function _getPath(obj: unknown, path: string | string[]): any {
   let parts = typeof path === 'string' ? path.split('.') : path;
 
-  for (let i = 0; i < parts.length; i++) {
+  for (let part of parts) {
     if (obj === undefined || obj === null || (obj as MaybeHasIsDestroyed).isDestroyed) {
       return undefined;
     }
 
-    obj = _getProp(obj, parts[i]);
+    obj = _getProp(obj, part);
   }
 
   return obj;
@@ -155,13 +154,13 @@ _getProp('foo' as any, 'a');
 _getProp('foo' as any, 1 as any);
 _getProp({}, 'a');
 _getProp({}, 1 as any);
-_getProp({ unkonwnProperty() {} }, 'a');
-_getProp({ unkonwnProperty() {} }, 1 as any);
+_getProp({ unknownProperty() {} }, 'a');
+_getProp({ unknownProperty() {} }, 1 as any);
 
 get({}, 'foo');
 get({}, 'foo.bar');
 
-let fakeProxy = {};
+let fakeProxy = {} as ProxyMixin<unknown>;
 setProxy(fakeProxy);
 
 track(() => _getProp({}, 'a'));

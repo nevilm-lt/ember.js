@@ -1,8 +1,12 @@
 # Ember Changelog
 
-### v4.2.0-beta.1 (December 28, 2021)
+### v4.3.0-beta.1 (February 7, 2022)
 
-- [#19878](https://github.com/emberjs/ember.js/pull/19772) [BUGFIX] Allow class-based helpers to work in strict-mode.
+No public API changes or bugfixes. 
+
+### v4.2.0 (February 7, 2022)
+
+- [#19878](https://github.com/emberjs/ember.js/pull/19878) [BUGFIX] Allow class-based helpers to work in strict-mode.
 
 ### v4.1.0 (December 28, 2021)
 
@@ -3140,7 +3144,7 @@ Clearly, `component-a` has subscribed to `some-other-component`'s `action`. Prev
 * CollectionView context is now its content
 * Various enhancements to bound helpers: adds multiple property support to bound helpers, adds bind-able options hash properties, adds {{unbound}} helper support to render unbound form of helpers.
 * Add App.inject
-* Add Ember.EnumberableUtils.intersection
+* Add Ember.EnumerableUtils.intersection
 * Deprecate Controller#controllerFor in favor of Controller#needs
 * Adds `bubbles` property to Ember.TextField
 * Allow overriding of Ember.Router#handleURL

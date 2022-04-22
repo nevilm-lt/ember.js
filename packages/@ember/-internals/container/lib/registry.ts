@@ -1,9 +1,9 @@
 import { Factory } from '@ember/-internals/owner';
 import { dictionary, intern } from '@ember/-internals/utils';
 import { assert, deprecate } from '@ember/debug';
+import { set } from '@ember/object';
 import { DEBUG } from '@glimmer/env';
 import Container, { ContainerOptions, LazyInjection } from './container';
-
 export interface Injection {
   property: string;
   specifier: string;
@@ -28,36 +28,30 @@ export interface IRegistry {
     fullName: string,
     optionName: K
   ): TypeOptions[K] | undefined;
-  getOptions(fullName: string): TypeOptions;
-  getOptionsForType(type: string): TypeOptions;
+  getOptions(fullName: string): TypeOptions | undefined;
+  getOptionsForType(type: string): TypeOptions | undefined;
   knownForType(type: string): KnownForTypeResult;
   makeToString<T, C>(factory: Factory<T, C>, fullName: string): string;
   normalizeFullName(fullName: string): string;
   resolve<T, C>(fullName: string, options?: ResolveOptions): Factory<T, C> | undefined;
 }
 
-export type NotResolver = {
-  knownForType: never;
-  lookupDescription: never;
-  makeToString: never;
-  normalize: never;
-  resolve: never;
-};
-
-export type Resolve = <T, C>(name: string) => Factory<T, C> | undefined;
+export interface ResolverClass {
+  create(...args: unknown[]): Resolver;
+}
 
 export interface Resolver {
   knownForType?: (type: string) => KnownForTypeResult;
   lookupDescription?: (fullName: string) => string;
   makeToString?: <T, C>(factory: Factory<T, C>, fullName: string) => string;
   normalize?: (fullName: string) => string;
-  resolve: Resolve;
+  resolve<T, C>(name: string): Factory<T, C> | undefined;
 }
 
 export interface RegistryOptions {
   fallback?: IRegistry;
   registrations?: { [key: string]: object };
-  resolver?: Resolver | (Resolve & NotResolver);
+  resolver?: Resolver;
 }
 
 const VALID_FULL_NAME_REGEXP = /^[^:]+:[^:]+$/;
@@ -77,14 +71,16 @@ const VALID_FULL_NAME_REGEXP = /^[^:]+:[^:]+$/;
 */
 export default class Registry implements IRegistry {
   readonly _failSet: Set<string>;
-  resolver: Resolver | (Resolve & NotResolver) | null;
+  resolver: Resolver | null;
   readonly fallback: IRegistry | null;
-  readonly registrations: { [key: string]: object };
-  _localLookupCache: { [key: string]: object };
-  readonly _normalizeCache: { [key: string]: string };
-  readonly _options: { [key: string]: TypeOptions };
-  readonly _resolveCache: { [key: string]: object };
-  readonly _typeOptions: { [key: string]: TypeOptions };
+  readonly registrations: Record<string, object>;
+  _localLookupCache: Record<string, object>;
+  readonly _normalizeCache: Record<string, string>;
+  readonly _options: Record<string, TypeOptions>;
+  readonly _resolveCache: Record<string, object>;
+  readonly _typeOptions: Record<string, TypeOptions>;
+
+  set?: typeof set;
 
   constructor(options: RegistryOptions = {}) {
     this.fallback = options.fallback || null;
@@ -182,7 +178,9 @@ export default class Registry implements IRegistry {
    @param {Function} factory
    @param {Object} options
    */
-  register<T, C>(fullName: string, factory: Factory<T, C>, options: object = {}): void {
+  register(fullName: string, factory: object, options: TypeOptions & { instantiate: false }): void;
+  register(fullName: string, factory: Factory<unknown>, options?: TypeOptions): void;
+  register(fullName: string, factory: object, options: TypeOptions = {}): void {
     assert('fullName must be a proper full name', this.isValidFullName(fullName));
     assert(`Attempting to register an unknown factory: '${fullName}'`, factory !== undefined);
 
@@ -396,7 +394,7 @@ export default class Registry implements IRegistry {
     this._typeOptions[type] = options;
   }
 
-  getOptionsForType(type: string): TypeOptions {
+  getOptionsForType(type: string): TypeOptions | undefined {
     let optionsForType = this._typeOptions[type];
     if (optionsForType === undefined && this.fallback !== null) {
       optionsForType = this.fallback.getOptionsForType(type);
@@ -415,7 +413,7 @@ export default class Registry implements IRegistry {
     this._options[normalizedName] = options;
   }
 
-  getOptions(fullName: string): TypeOptions {
+  getOptions(fullName: string): TypeOptions | undefined {
     let normalizedName = this.normalize(fullName);
     let options = this._options[normalizedName];
 
@@ -436,6 +434,7 @@ export default class Registry implements IRegistry {
     }
 
     let type = fullName.split(':')[0];
+    assert('has type', type); // split always will have at least one value
     options = this._typeOptions[type];
 
     if (options && options[optionName] !== undefined) {
@@ -484,8 +483,7 @@ export default class Registry implements IRegistry {
   knownForType(type: string): KnownForTypeResult {
     let localKnown = dictionary(null);
     let registeredNames = Object.keys(this.registrations);
-    for (let index = 0; index < registeredNames.length; index++) {
-      let fullName = registeredNames[index];
+    for (let fullName of registeredNames) {
       let itemType = fullName.split(':')[0];
 
       if (itemType === type) {
@@ -522,7 +520,9 @@ if (DEBUG) {
 
     for (let key in hash) {
       if (Object.prototype.hasOwnProperty.call(hash, key)) {
-        let { specifier } = hash[key];
+        let value = hash[key];
+        assert('has value', value);
+        let { specifier } = value;
         assert(
           `Expected a proper full name, given '${specifier}'`,
           this.isValidFullName(specifier)
@@ -543,9 +543,8 @@ if (DEBUG) {
       return;
     }
 
-    for (let i = 0; i < injections.length; i++) {
-      let { specifier } = injections[i];
-
+    for (let injection of injections) {
+      let { specifier } = injection;
       assert(`Attempting to inject an unknown injection: '${specifier}'`, this.has(specifier));
     }
   };
@@ -589,6 +588,8 @@ const privateNames: { [key: string]: string } = dictionary(null);
 const privateSuffix = `${Math.random()}${Date.now()}`.replace('.', '');
 
 export function privatize([fullName]: TemplateStringsArray): string {
+  assert('has a single string argument', arguments.length === 1 && fullName);
+
   let name = privateNames[fullName];
   if (name) {
     return name;

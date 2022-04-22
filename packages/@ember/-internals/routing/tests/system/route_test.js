@@ -4,6 +4,7 @@ import Service, { service } from '@ember/service';
 import { Object as EmberObject } from '@ember/-internals/runtime';
 import EmberRoute from '../../lib/system/route';
 import ObjectProxy from '@ember/-internals/runtime/lib/system/object_proxy';
+import { getDebugFunction, setDebugFunction } from '@ember/debug';
 
 let route, routeOne, routeTwo, lookupHash;
 
@@ -321,6 +322,10 @@ moduleFor(
     constructor() {
       super();
 
+      // Disable assertions for these tests so we can use fake controllers
+      this.originalAssert = getDebugFunction('assert');
+      setDebugFunction('assert', () => {});
+
       let owner = {
         lookup(fullName) {
           return lookupHash[fullName];
@@ -342,6 +347,7 @@ moduleFor(
     teardown() {
       runDestroy(routeOne);
       runDestroy(routeTwo);
+      setDebugFunction('assert', this.originalAssert);
     }
 
     ['@test route._qp does not crash if the controller has no QP, or setProperties'](assert) {
@@ -385,6 +391,8 @@ moduleFor(
       let authService = owner.lookup('service:auth');
 
       assert.equal(authService, appRoute.get('authService'), 'service.auth is injected');
+
+      runDestroy(owner);
     }
   }
 );
@@ -448,6 +456,8 @@ moduleFor(
         { c: 'd' },
         'params match for `posts` route in engine'
       );
+
+      runDestroy(engineInstance);
     }
 
     ["@test modelFor considers an engine's mountPoint"](assert) {
@@ -497,6 +507,8 @@ moduleFor(
 
       assert.strictEqual(route.modelFor('application'), applicationModel);
       assert.strictEqual(route.modelFor('posts'), postsModel);
+
+      runDestroy(engineInstance);
     }
 
     ["@test transitionTo considers an engine's mountPoint"](assert) {
@@ -542,6 +554,8 @@ moduleFor(
           'passes query param only transitions through'
         );
       }, /Calling transitionTo on a route is deprecated/);
+
+      runDestroy(engineInstance);
     }
 
     ["@test intermediateTransitionTo considers an engine's mountPoint"](assert) {
@@ -576,6 +590,8 @@ moduleFor(
       let queryParams = {};
       route.intermediateTransitionTo(queryParams);
       assert.strictEqual(lastRoute, queryParams, 'passes query param only transitions through');
+
+      runDestroy(engineInstance);
     }
 
     ["@test replaceWith considers an engine's mountPoint"](assert) {
@@ -621,6 +637,8 @@ moduleFor(
           'passes query param only transitions through'
         );
       }, /Calling replaceWith on a route is deprecated/);
+
+      runDestroy(engineInstance);
     }
   }
 );

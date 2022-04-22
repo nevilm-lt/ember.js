@@ -1,6 +1,7 @@
 import { privatize as P } from '@ember/-internals/container';
 import { ENV } from '@ember/-internals/environment';
 import { getOwner, Owner } from '@ember/-internals/owner';
+import { guidFor } from '@ember/-internals/utils';
 import { getViewElement, getViewId } from '@ember/-internals/views';
 import { assert } from '@ember/debug';
 import { _backburner, _getCurrentRunLoop } from '@ember/runloop';
@@ -38,23 +39,29 @@ import { unwrapTemplate } from '@glimmer/util';
 import { CURRENT_TAG, validateTag, valueForTag } from '@glimmer/validator';
 import { SimpleDocument, SimpleElement, SimpleNode } from '@simple-dom/interface';
 import RSVP from 'rsvp';
+import Component from './component';
 import { BOUNDS } from './component-managers/curly';
 import { createRootOutlet } from './component-managers/outlet';
 import { RootComponentDefinition } from './component-managers/root';
 import { NodeDOMTreeConstruction } from './dom';
 import { EmberEnvironmentDelegate } from './environment';
 import ResolverImpl from './resolver';
-import { Component } from './utils/curly-component-state-bucket';
 import { OutletState } from './utils/outlet';
 import OutletView from './views/outlet';
 
 export type IBuilder = (env: Environment, cursor: Cursor) => ElementBuilder;
 
+export interface View {
+  parentView: Option<View>;
+  renderer: Renderer;
+  tagName: string | null;
+  elementId: string | null;
+  isDestroying: boolean;
+  isDestroyed: boolean;
+}
+
 export class DynamicScope implements GlimmerDynamicScope {
-  constructor(
-    public view: Component | {} | null,
-    public outletState: Reference<OutletState | undefined>
-  ) {}
+  constructor(public view: View | null, public outletState: Reference<OutletState | undefined>) {}
 
   child() {
     return new DynamicScope(this.view, this.outletState);
@@ -129,7 +136,7 @@ class RootState {
       template !== undefined
     );
 
-    this.id = getViewId(root);
+    this.id = root instanceof OutletView ? guidFor(root) : getViewId(root);
     this.result = undefined;
     this.destroyed = false;
 
@@ -205,8 +212,8 @@ function deregister(renderer: Renderer): void {
 }
 
 function loopBegin(): void {
-  for (let i = 0; i < renderers.length; i++) {
-    renderers[i]._scheduleRevalidate();
+  for (let renderer of renderers) {
+    renderer._scheduleRevalidate();
   }
 }
 
@@ -249,12 +256,12 @@ function resolveRenderPromise() {
 
 let loops = 0;
 function loopEnd() {
-  for (let i = 0; i < renderers.length; i++) {
-    if (!renderers[i]._isValid()) {
+  for (let renderer of renderers) {
+    if (!renderer._isValid()) {
       if (loops > ENV._RERENDER_LOOP_LIMIT) {
         loops = 0;
         // TODO: do something better
-        renderers[i].destroy();
+        renderer.destroy();
         throw new Error('infinite rendering invalidation detected');
       }
       loops++;
@@ -433,6 +440,7 @@ export class Renderer {
     let i = this._roots.length;
     while (i--) {
       let root = roots[i];
+      assert('has root', root);
       if (root.isFor(view)) {
         root.destroy();
         roots.splice(i, 1);
@@ -448,7 +456,7 @@ export class Renderer {
     this._clearAllRoots();
   }
 
-  getElement(view: unknown): Option<SimpleElement> {
+  getElement(view: View): Option<SimpleElement> {
     if (this._isInteractive) {
       return getViewElement(view);
     } else {
@@ -500,6 +508,7 @@ export class Renderer {
         // each root is processed
         for (let i = 0; i < roots.length; i++) {
           let root = roots[i];
+          assert('has root', root);
 
           if (root.destroyed) {
             // add to the list of roots to be removed
@@ -561,8 +570,7 @@ export class Renderer {
 
   _clearAllRoots(): void {
     let roots = this._roots;
-    for (let i = 0; i < roots.length; i++) {
-      let root = roots[i];
+    for (let root of roots) {
       root.destroy();
     }
 

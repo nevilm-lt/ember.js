@@ -1,12 +1,12 @@
 <% if (testType === 'integration') { %>import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from '<%= dasherizedPackageName %>/tests/helpers';
 import { render } from '@ember/test-helpers';
 <%= hbsImportStatement %>
 
-module('<%= friendlyTestDescription %>', function(hooks) {
+module('<%= friendlyTestDescription %>', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
@@ -24,12 +24,12 @@ module('<%= friendlyTestDescription %>', function(hooks) {
     assert.dom(this.element).hasText('template block text');
   });
 });<% } else if (testType === 'unit') { %>import { module, test } from 'qunit';
-import { setupTest } from 'ember-qunit';
+import { setupTest } from '<%= dasherizedPackageName %>/tests/helpers';
 
-module('<%= friendlyTestDescription %>', function(hooks) {
+module('<%= friendlyTestDescription %>', function (hooks) {
   setupTest(hooks);
 
-  test('it exists', function(assert) {
+  test('it exists', function (assert) {
     let component = this.owner.factoryFor('component:<%= componentPathName %>').create();
     assert.ok(component);
   });

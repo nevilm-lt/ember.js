@@ -1,13 +1,17 @@
-import EngineInstance from './instance';
-import { EngineInstanceOptions, Factory } from '@ember/-internals/owner';
+import EngineInstance, { EngineInstanceOptions } from './instance';
+import { Namespace, RegistryProxyMixin } from '@ember/-internals/runtime';
+import { Registry } from '@ember/-internals/container';
 
-export function getEngineParent(instance: EngineInstance): EngineInstance | undefined;
+export { getEngineParent } from '@ember/engine/lib/engine-parent';
 
-export { EngineInstance };
-
-export default class Engine {
-  constructor(...args: any[]);
-  init(...args: any[]): void;
-  register<T, C>(fullName: string, factory: Factory<T, C>, options?: object): void;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface Engine extends RegistryProxyMixin {}
+declare class Engine extends Namespace {
+  static buildRegistry(engine: Engine): Registry;
   buildInstance(options?: EngineInstanceOptions): EngineInstance;
+  initializer: (initializer: unknown) => void;
+  instanceInitializer: (initializer: unknown) => void;
+  Resolver: unknown | null;
 }
+
+export { Engine as default };

@@ -1,8 +1,8 @@
-import { Owner } from '@ember/-internals/owner';
-import { RouterState, RoutingService } from '@ember/-internals/routing';
+import { Route, RouterState, RoutingService } from '@ember/-internals/routing';
 import { isSimpleClick } from '@ember/-internals/views';
 import { assert, debugFreeze, inspect, warn } from '@ember/debug';
-import { EngineInstance, getEngineParent } from '@ember/engine';
+import { getEngineParent } from '@ember/engine';
+import EngineInstance from '@ember/engine/instance';
 import { flaggedInstrument } from '@ember/instrumentation';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
@@ -274,7 +274,7 @@ class LinkTo extends InternalComponent {
     return 'LinkTo';
   }
 
-  @service('-routing') private declare routing: RoutingService;
+  @service('-routing') private declare routing: RoutingService<Route>;
 
   validateArguments(): void {
     assert(
@@ -466,12 +466,12 @@ class LinkTo extends InternalComponent {
   }
 
   private get isActive(): boolean {
-    return this.isActiveForState(this.routing.currentState as Maybe<RouterState>);
+    return this.isActiveForState(this.routing.currentState as Maybe<RouterState<Route>>);
   }
 
   private get willBeActive(): Option<boolean> {
-    let current = this.routing.currentState as Maybe<RouterState>;
-    let target = this.routing.targetState as Maybe<RouterState>;
+    let current = this.routing.currentState as Maybe<RouterState<Route>>;
+    let target = this.routing.targetState as Maybe<RouterState<Route>>;
 
     if (current === target) {
       return null;
@@ -489,11 +489,13 @@ class LinkTo extends InternalComponent {
   }
 
   private get isEngine(): boolean {
-    return getEngineParent(this.owner as EngineInstance) !== undefined;
+    let owner = this.owner;
+    return owner instanceof EngineInstance && getEngineParent(owner) !== undefined;
   }
 
   private get engineMountPoint(): string | undefined {
-    return (this.owner as Owner | EngineInstance).mountPoint;
+    let owner = this.owner;
+    return owner instanceof EngineInstance ? owner.mountPoint : undefined;
   }
 
   private classFor(state: 'active' | 'loading' | 'disabled'): string {
@@ -525,7 +527,7 @@ class LinkTo extends InternalComponent {
     }
   }
 
-  private isActiveForState(state: Maybe<RouterState>): boolean {
+  private isActiveForState(state: Maybe<RouterState<Route>>): boolean {
     if (!isPresent(state)) {
       return false;
     }

@@ -1,6 +1,7 @@
 import { get, PROPERTY_DID_CHANGE } from '@ember/-internals/metal';
 import { getOwner } from '@ember/-internals/owner';
 import { TargetActionSupport } from '@ember/-internals/runtime';
+import { CoreObjectClass } from '@ember/-internals/runtime/lib/system/core_object';
 import {
   ActionSupport,
   ChildViewsSupport,
@@ -13,7 +14,7 @@ import {
 } from '@ember/-internals/views';
 import { assert } from '@ember/debug';
 import { DEBUG } from '@glimmer/env';
-import { Environment } from '@glimmer/interfaces';
+import { Environment, Template, TemplateFactory } from '@glimmer/interfaces';
 import { setInternalComponentManager } from '@glimmer/manager';
 import { isUpdatableRef, updateRef } from '@glimmer/reference';
 import { normalizeProperty } from '@glimmer/runtime';
@@ -648,7 +649,39 @@ let lazyEventsProcessed = new WeakMap<EventDispatcher, WeakSet<object>>();
   @uses Ember.ViewStateSupport
   @public
 */
-const Component = CoreView.extend(
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface ComponentClass extends CoreObjectClass<Component> {}
+interface Component
+  extends CoreView,
+    ChildViewsSupport,
+    ViewStateSupport,
+    ClassNamesSupport,
+    TargetActionSupport,
+    ActionSupport,
+    ViewMixin {
+  attributeBindings?: string[];
+
+  /**
+    Layout can be used to wrap content in a component.
+    @property layout
+    @type Function
+    @public
+  */
+  layout?: TemplateFactory | Template;
+
+  /**
+    The name of the layout to lookup if no layout is provided.
+    By default `Component` will lookup a template with this name in
+    `Ember.TEMPLATES` (a shared global object).
+    @property layoutName
+    @type String
+    @default undefined
+    @private
+  */
+  layoutName?: string;
+}
+
+const Component = (CoreView.extend(
   ChildViewsSupport,
   ViewStateSupport,
   ClassNamesSupport,
@@ -710,8 +743,12 @@ const Component = CoreView.extend(
         let owner = getOwner(this);
         assert('Component is unexpectedly missing an owner', owner);
 
-        if (owner.lookup<Environment>('-environment:main')!.isInteractive) {
-          this.__dispatcher = owner.lookup<EventDispatcher>('event_dispatcher:main');
+        if ((owner.lookup('-environment:main') as Environment)!.isInteractive) {
+          this.__dispatcher = owner.lookup('event_dispatcher:main');
+          assert(
+            'Expected dispatcher to be an EventDispatcher',
+            this.__dispatcher instanceof EventDispatcher
+          );
         } else {
           // In FastBoot we have no EventDispatcher. Set to null to not try again to look it up.
           this.__dispatcher = null;
@@ -983,23 +1020,6 @@ const Component = CoreView.extend(
      */
 
     /**
-      Layout can be used to wrap content in a component.
-      @property layout
-      @type Function
-      @public
-    */
-
-    /**
-      The name of the layout to lookup if no layout is provided.
-      By default `Component` will lookup a template with this name in
-      `Ember.TEMPLATES` (a shared global object).
-      @property layoutName
-      @type String
-      @default null
-      @private
-    */
-
-    /**
       The HTML `id` of the component's element in the DOM. You can provide this
       value yourself but it must be unique (just as in HTML):
 
@@ -1032,7 +1052,7 @@ const Component = CoreView.extend(
       @public
     */
   }
-);
+) as unknown) as ComponentClass;
 
 Component.toString = () => '@ember/component';
 

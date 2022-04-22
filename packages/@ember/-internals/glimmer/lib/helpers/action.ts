@@ -290,11 +290,12 @@ export default internalHelper(
     // pos[1] is the action name or function
     // Anything else is an action argument.
     let [context, action, ...restArgs] = positional;
+    assert('hash position arguments', context && action);
 
     let debugKey: string = action.debugLabel!;
 
-    let target = 'target' in named ? named.target : context;
-    let processArgs = makeArgsProcessor('value' in named && named.value, restArgs);
+    let target = 'target' in named ? named['target'] : context;
+    let processArgs = makeArgsProcessor(('value' in named && named['value']) || false, restArgs);
 
     let fn: Function;
 
@@ -309,7 +310,7 @@ export default internalHelper(
     } else {
       fn = makeDynamicClosureAction(
         valueForRef(context) as object,
-        target,
+        target!,
         action,
         processArgs,
         debugKey
@@ -361,7 +362,7 @@ function makeArgsProcessor(valuePathRef: Reference | false, actionArgsRef: Refer
 function makeDynamicClosureAction(
   context: object,
   targetRef: Reference<MaybeActionHandler>,
-  actionRef: Reference<string | Function>,
+  actionRef: Reference<string | ((...args: any[]) => any)>,
   processArgs: (args: unknown[]) => unknown[],
   debugKey: string
 ) {
@@ -388,34 +389,32 @@ function makeDynamicClosureAction(
 }
 
 interface MaybeActionHandler {
-  actions?: Record<string, Function>;
+  actions?: Record<string, (...args: any[]) => any>;
 }
 
 function makeClosureAction(
   context: object,
   target: MaybeActionHandler,
-  action: string | Function,
+  action: string | ((...args: any[]) => any),
   processArgs: (args: unknown[]) => unknown[],
   debugKey: string
 ) {
   let self: object;
-  let fn: Function;
+  let fn: (...args: any[]) => any;
 
   assert(
     `Action passed is null or undefined in (action) from ${target}.`,
     action !== undefined && action !== null
   );
 
-  let typeofAction = typeof action;
-
-  if (typeofAction === 'string') {
+  if (typeof action === 'string') {
     self = target;
     fn = (target.actions && target.actions[action as string])!;
 
     assert(`An action named '${action}' was not found in ${target}`, Boolean(fn));
-  } else if (typeofAction === 'function') {
+  } else if (typeof action === 'function') {
     self = context;
-    fn = action as Function;
+    fn = action;
   } else {
     assert(
       `An action could not be made for \`${

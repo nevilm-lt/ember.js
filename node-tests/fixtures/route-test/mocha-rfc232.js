@@ -1,11 +1,11 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { setupTest } from 'ember-mocha';
+import { setupTest } from 'my-app/tests/helpers';
 
-describe('Unit | Route | foo', function() {
+describe('Unit | Route | foo', function () {
   setupTest();
 
-  it('exists', function() {
+  it('exists', function () {
     let route = this.owner.lookup('route:foo');
     expect(route).to.be.ok;
   });

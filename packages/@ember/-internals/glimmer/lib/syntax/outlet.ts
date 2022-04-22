@@ -6,7 +6,6 @@ import {
   childRefFromParts,
   createComputeRef,
   createDebugAliasRef,
-  createPrimitiveRef,
   Reference,
   valueForRef,
 } from '@glimmer/reference';
@@ -38,30 +37,22 @@ import { OutletState } from '../utils/outlet';
   Note: Your content __will not render__ if there isn't an `{{outlet}}` for it.
 
   @method outlet
-  @param {String} [name]
   @for Ember.Templates.helpers
   @public
 */
 export const outletHelper = internalHelper(
-  (args: CapturedArguments, owner?: Owner, scope?: DynamicScope) => {
+  (_args: CapturedArguments, owner?: Owner, scope?: DynamicScope) => {
     assert('Expected owner to be present, {{outlet}} requires an owner', owner);
     assert(
       'Expected dynamic scope to be present. You may have attempted to use the {{outlet}} keyword dynamically. This keyword cannot be used dynamically.',
       scope
     );
-    let nameRef: Reference<string>;
-
-    if (args.positional.length === 0) {
-      nameRef = createPrimitiveRef('main');
-    } else {
-      nameRef = args.positional[0];
-    }
 
     let outletRef = createComputeRef(() => {
       let state = valueForRef(scope.get('outletState') as Reference<OutletState | undefined>);
       let outlets = state !== undefined ? state.outlets : undefined;
 
-      return outlets !== undefined ? outlets[valueForRef(nameRef)] : undefined;
+      return outlets !== undefined ? outlets['main'] : undefined;
     });
 
     let lastState: OutletDefinitionState | null = null;
@@ -89,7 +80,7 @@ export const outletHelper = internalHelper(
           // dynamic scope also changes, and so the original model ref would not
           // provide the correct updated value. So we stop updating and return
           // the _last_ model value for that outlet.
-          named.model = createComputeRef(() => {
+          named['model'] = createComputeRef(() => {
             if (lastState === state) {
               model = valueForRef(modelRef);
             }
@@ -98,7 +89,7 @@ export const outletHelper = internalHelper(
           });
 
           if (DEBUG) {
-            named.model = createDebugAliasRef!('@model', named.model);
+            named['model'] = createDebugAliasRef!('@model', named['model']);
           }
 
           let args = createCapturedArgs(named, EMPTY_POSITIONAL);

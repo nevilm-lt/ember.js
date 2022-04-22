@@ -1,6 +1,8 @@
 import { privatize as P } from '@ember/-internals/container';
+import { TypeOptions } from '@ember/-internals/container/lib/registry';
 import { ENV } from '@ember/-internals/environment';
-import { Factory, FactoryClass, LookupOptions, Owner } from '@ember/-internals/owner';
+import { Factory, Owner } from '@ember/-internals/owner';
+import { EMBER_UNIQUE_ID_HELPER } from '@ember/canary-features';
 import { assert } from '@ember/debug';
 import { _instrumentStart } from '@ember/instrumentation';
 import { DEBUG } from '@glimmer/env';
@@ -48,6 +50,8 @@ import { default as eachIn } from './helpers/each-in';
 import { default as mut } from './helpers/mut';
 import { default as readonly } from './helpers/readonly';
 import { default as unbound } from './helpers/unbound';
+import { default as uniqueId } from './helpers/unique-id';
+
 import actionModifier from './modifiers/action';
 import { mountHelper } from './syntax/mount';
 import { outletHelper } from './syntax/outlet';
@@ -56,28 +60,24 @@ function instrumentationPayload(name: string) {
   return { object: `component:${name}` };
 }
 
-function componentFor(
-  name: string,
-  owner: Owner,
-  options?: LookupOptions
-): Option<Factory<{}, {}>> {
+function componentFor(name: string, owner: Owner): Option<Factory<unknown>> {
   let fullName = `component:${name}`;
-  return owner.factoryFor(fullName, options) || null;
+  return owner.factoryFor(fullName) || null;
 }
 
-function layoutFor(name: string, owner: Owner, options?: LookupOptions): Option<Template> {
+function layoutFor(name: string, owner: Owner, options?: TypeOptions): Option<Template> {
   let templateFullName = `template:components/${name}`;
 
-  return owner.lookup(templateFullName, options) || null;
+  return (owner.lookup(templateFullName, options) as Template) || null;
 }
 
 type LookupResult =
   | {
-      component: Factory<{}, {}>;
+      component: Factory<unknown>;
       layout: TemplateFactory;
     }
   | {
-      component: Factory<{}, {}>;
+      component: Factory<unknown>;
       layout: null;
     }
   | {
@@ -88,9 +88,9 @@ type LookupResult =
 function lookupComponentPair(
   owner: Owner,
   name: string,
-  options?: LookupOptions
+  options?: TypeOptions
 ): Option<LookupResult> {
-  let component = componentFor(name, owner, options);
+  let component = componentFor(name, owner);
 
   if (component !== null && component.class !== undefined) {
     let layout = getComponentTemplate(component.class);
@@ -147,6 +147,10 @@ const BUILTIN_HELPERS = {
   hash,
 };
 
+if (EMBER_UNIQUE_ID_HELPER) {
+  BUILTIN_HELPERS['unique-id'] = uniqueId;
+}
+
 const BUILTIN_KEYWORD_MODIFIERS = {
   action: actionModifier,
 };
@@ -176,10 +180,12 @@ export default class ResolverImpl implements RuntimeResolver<Owner>, CompileTime
       return helper;
     }
 
-    const factory = owner.factoryFor<
-      SimpleHelper | HelperInstance,
-      HelperFactory<SimpleHelper | HelperInstance>
-    >(`helper:${name}`);
+    const factory = owner.factoryFor(`helper:${name}`) as
+      | Factory<
+          SimpleHelper<unknown, unknown[], Record<string, unknown>>,
+          HelperFactory<SimpleHelper<unknown, unknown[], Record<string, unknown>>>
+        >
+      | Factory<HelperInstance, HelperFactory<HelperInstance>>;
 
     if (factory === undefined) {
       return null;
@@ -224,7 +230,7 @@ export default class ResolverImpl implements RuntimeResolver<Owner>, CompileTime
       return builtin;
     }
 
-    let modifier = owner.factoryFor<unknown, FactoryClass>(`modifier:${name}`);
+    let modifier = owner.factoryFor(`modifier:${name}`);
 
     if (modifier === undefined) {
       return null;

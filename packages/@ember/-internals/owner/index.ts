@@ -1,13 +1,11 @@
 import { getOwner as glimmerGetOwner, setOwner as glimmerSetOwner } from '@glimmer/owner';
+import { TypeOptions } from '../container/lib/registry';
 
 /**
 @module @ember/application
 */
 
-export interface LookupOptions {
-  singleton?: boolean;
-  instantiate?: boolean;
-}
+export { TypeOptions };
 
 export interface FactoryClass {
   positionalParams?: string | string[] | undefined | null;
@@ -21,24 +19,26 @@ export interface Factory<T, C extends FactoryClass | object = FactoryClass> {
   create(props?: { [prop: string]: any }): T;
 }
 
-export interface EngineInstanceOptions {
-  mountPoint: string;
-  routable: boolean;
-}
-
-import EngineInstance from '@ember/engine/instance';
+// A combination of the public methods on ContainerProxyMixin and RegistryProxyMixin
 export interface Owner {
-  lookup<T>(fullName: string, options?: LookupOptions): T | undefined;
-  factoryFor<T, C>(fullName: string, options?: LookupOptions): Factory<T, C> | undefined;
-  register<T, C>(fullName: string, factory: Factory<T, C>, options?: LookupOptions): void;
-  hasRegistration(name: string, options?: LookupOptions): boolean;
+  // From ContainerProxy
+  ownerInjection(): void;
+  lookup(fullName: string, options?: TypeOptions): unknown;
+  factoryFor(fullName: string): Factory<unknown> | undefined;
 
-  /** @internal */
-  mountPoint?: string;
-  /** @internal */
-  routable?: boolean;
-  /** @internal */
-  buildChildEngineInstance(name: string, options?: EngineInstanceOptions): EngineInstance;
+  // From RegistryProxy
+  resolveRegistration<T, C>(fullName: string): Factory<T, C> | undefined;
+  register(fullName: string, factory: Factory<unknown>, options?: TypeOptions): void;
+  unregister(fullName: string): void;
+  hasRegistration(fullName: string): boolean;
+  registeredOption<K extends keyof TypeOptions>(
+    fullName: string,
+    optionName: K
+  ): TypeOptions[K] | undefined;
+  registerOptions(fullName: string, options: TypeOptions): void;
+  registeredOptions(fullName: string): TypeOptions | undefined;
+  registerOptionsForType(type: string, options: TypeOptions): void;
+  registeredOptionsForType(type: string): TypeOptions | undefined;
 }
 
 /**

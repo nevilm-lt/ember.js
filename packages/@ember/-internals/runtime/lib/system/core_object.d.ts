@@ -1,3 +1,5 @@
+import { Owner } from '@ember/-internals/owner';
+
 /**
  * Used to infer the type of ember classes of type `T`.
  *
@@ -9,18 +11,41 @@
  * Implementation is carefully chosen for the reasons described in
  * https://github.com/typed-ember/ember-typings/pull/29
  */
-type EmberClassConstructor<T> = (new (properties?: object) => T) & (new (...args: any[]) => T);
+/** @internal */
+export type EmberClassConstructor<T> = new (owner: Owner) => T;
 
-type MergeArray<Arr extends any[]> = Arr extends [infer T, ...infer Rest]
+/** @internal */
+export type MergeArray<Arr extends any[]> = Arr extends [infer T, ...infer Rest]
   ? T & MergeArray<Rest>
   : unknown; // TODO: Is this correct?
+
+/** @internal */
+export interface CoreObjectClass<Instance> extends EmberClassConstructor<Instance> {
+  /** @internal */
+  extend<Statics>(
+    this: EmberClassConstructor<Instance>,
+    ...args: any[]
+  ): CoreObjectClass<Statics & Instance>;
+
+  /** @internal */
+  reopen(...args: any[]): any;
+
+  /** @internal */
+  reopenClass(...args: any[]): any;
+
+  /** @internal */
+  create<Class extends EmberClassConstructor<Instance>, Args extends Array<Record<string, any>>>(
+    this: Class,
+    ...args: Args
+  ): InstanceType<Class> & MergeArray<Args>;
+}
 
 export default class CoreObject {
   /** @internal */
   static extend<Statics, Instance>(
     this: Statics & EmberClassConstructor<Instance>,
     ...args: any[]
-  ): Readonly<Statics> & EmberClassConstructor<Instance>;
+  ): Readonly<Statics> & CoreObjectClass<Instance>;
 
   /** @internal */
   static reopen(...args: any[]): any;
@@ -29,9 +54,9 @@ export default class CoreObject {
   static reopenClass(...args: any[]): any;
 
   /**
-   * CoreObject constructor takes initial object properties as an argument.
+   * CoreObject constructor takes owner.
    */
-  constructor(properties?: object);
+  constructor(owner: Owner);
 
   /** @internal */
   _super(...args: any[]): any;
@@ -61,6 +86,7 @@ export default class CoreObject {
    */
   isDestroying: boolean;
 
+  // NOTE That the actual CoreObject#destroy returns `this`;
   /**
    * Destroys an object by setting the `isDestroyed` flag and removing its
    * metadata, which effectively destroys observers and bindings.
@@ -70,7 +96,7 @@ export default class CoreObject {
    * happen immediately.  It will set an isDestroying flag immediately.
    * @return receiver
    */
-  destroy(): CoreObject;
+  destroy(): void;
 
   /**
    * Override to implement teardown.
@@ -116,4 +142,7 @@ export default class CoreObject {
 
   /** @internal */
   static isMethod: boolean;
+
+  /** @internal */
+  static superclass: unknown;
 }
